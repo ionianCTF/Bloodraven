@@ -1,0 +1,225 @@
+version: "3.7"
+
+volumes:
+  esdata:
+    driver: local
+  dbdata:
+    driver: local
+
+services:
+  metadon:
+    image: dregistry.qa.pdmfc.com/metadon-hese:1.0.0
+    ports:
+      - 80:80
+    depends_on:
+      - document-manager
+      - event-manager
+      - live-preview
+      - detection-rule-engine
+
+  document-manager:
+    image: dregistry.qa.pdmfc.com/document-manager-hese:1.0.0
+    environment:
+      NODE_ENV: qa
+      ENVIRONMENT: SPHINX
+      PORT: 9000
+      HOST: 0.0.0.0
+      MQL_ENDPOINT: http://metano-query-language:5000/
+      ELASTIC_SEARCH_ENDPOINT: http://elastic-search:9200/
+      ELASTIC_SEARCH_REQUEST_TIMEOUT: 30000
+      ELASTIC_SEARCH_PING_TIMEOUT: 3000
+      # KAFKA SPHINX
+      BOOTSTRAP_SERVERS: evora-bootstrap.172.26.7.181.nip.io:443
+      SM_IP: http://evora.172.26.7.181.nip.io/SMPlatform/manager/rst
+      OAUTH_TOKEN_ENDPOINT_URI: http://evora.172.26.7.181.nip.io/SMPlatform/manager/rst/getKafkaToken
+      OAUTH_CLIENT_ID: SIEM
+      KAFKA_USERNAME: kafkauser
+      KAFKA_PASSWORD: kafkauser123
+      KAFKA_CERT: assets/for_clients_prod.crt
+      #KAFKA LOCAL
+      # BOOTSTRAP_SERVERS: kafka:9092
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USERNAME: siem
+      DB_PASS: siem2021
+      DB_DATABASE: siem
+      DB_TYPE: postgres
+    ports:
+      - "9000:9000"
+      - "10000-10010:10000-10010"
+    depends_on:
+      - metano-query-language
+      - elastic-search
+      - db
+
+  event-manager:
+    image: dregistry.qa.pdmfc.com/event-manager-hese:1.0.0
+    environment:
+      NODE_ENV: qa
+      ENVIRONMENT: SPHINX
+      PORT: 9001
+      HOST: 0.0.0.0
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MQL_ENDPOINT: http://metano-query-language:5000/
+      ELASTIC_SEARCH_ENDPOINT: http://elastic-search:9200/
+      ELASTIC_SEARCH_REQUEST_TIMEOUT: 30000
+      ELASTIC_SEARCH_PING_TIMEOUT: 3000
+      #KAFKA SPHINX
+      BOOTSTRAP_SERVERS: evora-bootstrap.172.26.7.181.nip.io:443
+      SM_IP: http://evora.172.26.7.181.nip.io/SMPlatform/manager/rst
+      OAUTH_TOKEN_ENDPOINT_URI: http://evora.172.26.7.181.nip.io/SMPlatform/manager/rst/getKafkaToken
+      OAUTH_CLIENT_ID: SIEM
+      KAFKA_USERNAME: kafkauser
+      KAFKA_PASSWORD: kafkauser123
+      KAFKA_CERT: assets/for_clients_prod.crt
+      #KAFKA LOCAL
+      # BOOTSTRAP_SERVERS: kafka:9092
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USERNAME: siem
+      DB_PASS: siem2021
+      DB_DATABASE: siem
+      DB_TYPE: postgres
+    ports:
+      - "9001:9001"
+    depends_on:
+      - metano-query-language
+      - elastic-search
+      - redis
+      - db
+
+  live-preview:
+    image: dregistry.qa.pdmfc.com/live-preview-hese:1.0.0
+    environment:
+      NODE_ENV: qa
+      PORT: 9999
+      HOST: 0.0.0.0
+      ENVIRONMENT: SPHINX
+      # ENVIRONMENT: LOCAL
+      CLIENT_ID: meta-live-preview
+      LIVE_PREVIEW_TOPIC_NAME: 'siem-live-preview-message'
+      #KAFKA SPHINX
+      BOOTSTRAP_SERVERS: evora-bootstrap.172.26.7.181.nip.io:443
+      SM_IP: http://evora.172.26.7.181.nip.io/SMPlatform/manager/rst
+      OAUTH_TOKEN_ENDPOINT_URI: http://evora.172.26.7.181.nip.io/SMPlatform/manager/rst/getKafkaToken
+      OAUTH_CLIENT_ID: SIEM
+      KAFKA_USERNAME: kafkauser
+      KAFKA_PASSWORD: kafkauser123
+      KAFKA_CERT: assets/for_clients_prod.crt
+      # KAFKA LOCAL
+      # BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "9999:9999"
+
+  meta-notifier:
+    image: dregistry.qa.pdmfc.com/meta-notifier-hese:1.0.0
+    environment:
+      NODE_ENV: qa
+      ENVIRONMENT: SPHINX
+      # ENVIRONMENT: LOCAL
+      #KAFKA SPHINX
+      BOOTSTRAP_SERVERS: evora-bootstrap.172.26.7.181.nip.io:443
+      SM_IP: http://evora.172.26.7.181.nip.io/SMPlatform/manager/rst
+      OAUTH_TOKEN_ENDPOINT_URI: http://evora.172.26.7.181.nip.io/SMPlatform/manager/rst/getKafkaToken
+      OAUTH_CLIENT_ID: SIEM
+      KAFKA_USERNAME: kafkauser
+      KAFKA_PASSWORD: kafkauser123
+      KAFKA_CERT: assets/for_clients_prod.crt
+      # KAFKA LOCAL
+      # BOOTSTRAP_SERVERS: kafka:9092
+
+  integration-bbtr:
+    image: dregistry.qa.pdmfc.com/integration-bbtr-hese:1.0.0
+    environment:
+      NODE_ENV: qa
+      PORT: 9003
+      HOST: 0.0.0.0
+      HOSPITAL_ID: h1
+      THREATS_INDEX_NAME: threats-repository
+      SEND_NEW_THREATS_TO_KAFKA: 'false'
+      KAFKA_TOPIC_NAMES: topic-name,topicname-2
+      ELASTIC_SEARCH_ENDPOINT: http://elastic-search:9200/
+      ELASTIC_SEARCH_REQUEST_TIMEOUT: 30000
+      ELASTIC_SEARCH_PING_TIMEOUT: 3000
+      #KAFKA SPHINX - OBS: currently this project its only associated with SPHINX, 
+      # so and it does not validate if the environment is SPHINX before adding the    credentials to the KAFKA connection
+      BOOTSTRAP_SERVERS: evora-bootstrap.172.26.7.181.nip.io:443
+      SM_IP: http://evora.172.26.7.181.nip.io/SMPlatform/manager/rst
+      OAUTH_TOKEN_ENDPOINT_URI: http://evora.172.26.7.181.nip.io/SMPlatform/manager/rst/getKafkaToken
+      OAUTH_CLIENT_ID: SIEM
+      KAFKA_USERNAME: kafkauser
+      KAFKA_PASSWORD: kafkauser123
+      KAFKA_CERT: assets/for_clients_prod.crt
+      BBTR_ENDPOINT: https://api.blockchain.tecnalia.com/api/sphinx
+      BBTR_USERNAME: hospital1_siem1
+      BBTR_PASSWORD: tecnalia
+      BBTR_NETWORK: sphinx-network
+      BBTR_ORGANIZATION: hospital1MSP
+      LISTENER_CHANNEL_NAME: threat
+      LISTENER_SMART_CONTRACT_NAME: trcc
+      LISTENER_CA_NAME: ca.hospital1.tecnalia.lab
+      LISTENER_CONNECTION_FILE: assets/bbtr-listener/cc.network-profile.yaml
+      LISTENER_APP_ADMIN: admin
+      LISTENER_APP_ADMIN_SECRET: adminpw
+      LISTENER_ORG_MSPID: hospital1MSP
+      LISTENER_GATEWAY_DISCOVERY_ENABLED: 'true'
+      LISTENER_GATEWAY_DISCOVERY_AS_LOCALHOST: 'false'
+      LISTENER_WALLET_PATH: wallet
+    ports:
+      - "9003:9003"
+    depends_on:
+      - elastic-search
+
+  metano-query-language:
+    image: dregistry.qa.pdmfc.com/metano-query-language:1.0.0
+    ports:
+      - "5000:5000"
+    depends_on:
+      - elastic-search
+
+  elastic-search:
+    image: elasticsearch:7.14.1
+    environment:
+      - "discovery.type=single-node"
+    ports:
+      - "9200:9200"
+    restart: unless-stopped
+    volumes:
+      - esdata:/usr/share/elasticsearch/data:rw
+
+  db:
+    image: postgres:9.4
+    restart: always
+    tty: true
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: siem
+      POSTGRES_PASSWORD: siem2021
+      POSTGRES_DB: siem
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+
+  detection-rule-engine:
+    image: dregistry.qa.pdmfc.com/detection-rule-engine:1.0.0
+    environment:
+      BASE_SIGMA_PATH: /usr/src/app/sigma
+      BASE_CONFIG_SIGMA_PATH: /usr/src/app/config
+      BASE_APP_PATH: .
+      NODE_ENV: qa
+      PORT: 9004
+      HOST: 0.0.0.0
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USERNAME: siem
+      DB_PASS: siem2021
+      DB_DATABASE: siem
+      DB_TYPE: postgres
+    ports:
+      - "9004:9004"
